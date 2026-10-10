@@ -50,20 +50,20 @@ export default function AddPatientPage() {
       ST_Slope: 'Flat'
     },
     moderateRisk: {
-      name: 'Priya Verma',
-      age: 52,
-      gender: 'F',
+      name: 'Amit Patel',
+      age: 48,
+      gender: 'M',
       contact: '9734567890',
-      height: 162,
-      weight: 64,
-      ChestPainType: 'ATA',
+      height: 172,
+      weight: 74,
+      ChestPainType: 'NAP',
       RestingBP: 128,
-      Cholesterol: 238,
+      Cholesterol: 235,
       FastingBS: 0,
       RestingECG: 'Normal',
-      MaxHR: 145,
+      MaxHR: 140,
       ExerciseAngina: 'N',
-      Oldpeak: 0.8,
+      Oldpeak: 0.9,
       ST_Slope: 'Flat'
     },
     lowRisk: {
@@ -213,7 +213,7 @@ export default function AddPatientPage() {
             onClick={() => loadPreset('moderateRisk')}
             className="px-2.5 py-1 bg-white border border-slate-300 hover:bg-slate-100 text-amber-700 rounded text-xs font-medium"
           >
-            Sample Moderate Risk (Priya)
+            Sample Moderate Risk (Amit)
           </button>
           <button
             type="button"
