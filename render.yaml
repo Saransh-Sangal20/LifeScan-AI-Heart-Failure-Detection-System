@@ -1,0 +1,30 @@
+services:
+  # 1. Python ML Microservice
+  - type: web
+    name: lifescan-ml-service
+    runtime: python
+    rootDir: ml-service
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.12
+
+  # 2. Node.js & Express API Backend
+  - type: web
+    name: lifescan-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FLASK_API_URL
+        fromService:
+          type: web
+          name: lifescan-ml-service
+          property: host
+      # Note: Set your MongoDB Atlas connection string in the Render Dashboard
+      - key: MONGODB_URI
+        sync: false
