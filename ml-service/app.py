@@ -164,7 +164,13 @@ def validate_patient_payload(data: Any) -> Tuple[bool, Dict[str, Any], Dict[str,
             val = 1 if val else 0
 
         try:
-            num_val = rule["type"](val)
+            # Handle float strings, decimal commas from international keyboards, and whitespace
+            val_str = str(val).strip().replace(',', '.')
+            if rule["type"] is int:
+                num_val = int(round(float(val_str)))
+            else:
+                num_val = float(val_str)
+
             if num_val < rule["min"] or num_val > rule["max"]:
                 validation_errors.append({
                     "field": field,

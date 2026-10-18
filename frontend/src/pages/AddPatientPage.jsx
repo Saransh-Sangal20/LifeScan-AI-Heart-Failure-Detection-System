@@ -97,29 +97,46 @@ export default function AddPatientPage() {
   };
 
   const handleChange = (e) => {
-    const { name, value, type } = e.target;
+    let { name, value, type } = e.target;
+    // For numeric inputs, allow natural mobile typing without prematurely converting to Number
+    if (type === 'number' || name === 'Oldpeak' || name === 'age' || name === 'RestingBP' || name === 'Cholesterol' || name === 'MaxHR') {
+      if (typeof value === 'string') {
+        value = value.replace(',', '.');
+      }
+    }
     setForm(prev => ({
       ...prev,
-      [name]: type === 'number' ? (value === '' ? '' : Number(value)) : value
+      [name]: value
     }));
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }));
     }
   };
 
+  const cleanNum = (v) => {
+    if (v === '' || v === null || v === undefined) return NaN;
+    return Number(String(v).replace(',', '.').trim());
+  };
+
   const validate = () => {
     const errs = {};
+    const ageNum = cleanNum(form.age);
+    const bpNum = cleanNum(form.RestingBP);
+    const cholNum = cleanNum(form.Cholesterol);
+    const hrNum = cleanNum(form.MaxHR);
+    const oldpeakNum = cleanNum(form.Oldpeak);
+
     if (!form.name || !form.name.trim()) errs.name = 'Patient name is required.';
-    if (!form.age || form.age < 1 || form.age > 120) errs.age = 'Enter a valid age (1-120).';
+    if (isNaN(ageNum) || ageNum < 1 || ageNum > 120) errs.age = 'Enter a valid age (1-120).';
     if (!form.gender) errs.gender = 'Please select a gender.';
-    if (!form.RestingBP || form.RestingBP < 40 || form.RestingBP > 300) errs.RestingBP = 'Enter resting BP (40-300 mm Hg).';
-    if (form.Cholesterol === '' || form.Cholesterol < 0 || form.Cholesterol > 700) errs.Cholesterol = 'Enter cholesterol (0-700 mg/dl).';
-    if (form.FastingBS === '') errs.FastingBS = 'Please select fasting blood sugar.';
+    if (isNaN(bpNum) || bpNum < 40 || bpNum > 300) errs.RestingBP = 'Enter resting BP (40-300 mm Hg).';
+    if (isNaN(cholNum) || cholNum < 0 || cholNum > 700) errs.Cholesterol = 'Enter cholesterol (0-700 mg/dl).';
+    if (form.FastingBS === '' || form.FastingBS === null || form.FastingBS === undefined) errs.FastingBS = 'Please select fasting blood sugar.';
     if (!form.RestingECG) errs.RestingECG = 'Please select resting ECG.';
-    if (!form.MaxHR || form.MaxHR < 40 || form.MaxHR > 250) errs.MaxHR = 'Enter max HR (40-250 bpm).';
+    if (isNaN(hrNum) || hrNum < 40 || hrNum > 250) errs.MaxHR = 'Enter max HR (40-250 bpm).';
     if (!form.ChestPainType) errs.ChestPainType = 'Please select chest pain type.';
     if (!form.ExerciseAngina) errs.ExerciseAngina = 'Please select exercise angina status.';
-    if (form.Oldpeak === '' || form.Oldpeak < -5 || form.Oldpeak > 10) errs.Oldpeak = 'Enter ST depression (-5.0 to 10.0).';
+    if (isNaN(oldpeakNum) || oldpeakNum < -5 || oldpeakNum > 10) errs.Oldpeak = 'Enter ST depression (-5.0 to 10.0 mm).';
     if (!form.ST_Slope) errs.ST_Slope = 'Please select peak ST slope.';
 
     setErrors(errs);
@@ -129,30 +146,38 @@ export default function AddPatientPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) {
-      setToast({ type: 'error', message: 'Please complete the required medical parameters.' });
+      setToast({ type: 'error', message: 'Please complete all required medical parameters with valid numbers.' });
       return;
     }
 
     try {
       setLoading(true);
+      const ageNum = Math.round(cleanNum(form.age));
+      const bpNum = Math.round(cleanNum(form.RestingBP));
+      const cholNum = Math.round(cleanNum(form.Cholesterol));
+      const hrNum = Math.round(cleanNum(form.MaxHR));
+      const oldpeakNum = Number(cleanNum(form.Oldpeak).toFixed(1));
+      const hNum = cleanNum(form.height);
+      const wNum = cleanNum(form.weight);
+
       const payload = {
         name: form.name.trim(),
-        age: Number(form.age),
+        age: ageNum,
         gender: form.gender,
         contact: form.contact ? form.contact.trim() : '',
-        height: form.height ? Number(form.height) : null,
-        weight: form.weight ? Number(form.weight) : null,
-        // 11 ML features
-        Age: Number(form.age),
+        height: isNaN(hNum) ? null : hNum,
+        weight: isNaN(wNum) ? null : wNum,
+        // 11 ML features explicitly formatted
+        Age: ageNum,
         Sex: form.gender,
         ChestPainType: form.ChestPainType,
-        RestingBP: Number(form.RestingBP),
-        Cholesterol: Number(form.Cholesterol),
+        RestingBP: bpNum,
+        Cholesterol: cholNum,
         FastingBS: Number(form.FastingBS),
         RestingECG: form.RestingECG,
-        MaxHR: Number(form.MaxHR),
+        MaxHR: hrNum,
         ExerciseAngina: form.ExerciseAngina,
-        Oldpeak: Number(form.Oldpeak),
+        Oldpeak: oldpeakNum,
         ST_Slope: form.ST_Slope
       };
 
@@ -163,9 +188,13 @@ export default function AddPatientPage() {
       navigate(`/report/${targetId}`);
     } catch (err) {
       console.error('Prediction failed:', err);
+      let errMsg = err.message || err.error || 'Failed to generate prediction. Check backend connection.';
+      if (err.details && Array.isArray(err.details)) {
+        errMsg = err.details.map(d => d.error || d.message).join(' ');
+      }
       setToast({
         type: 'error',
-        message: err.message || err.error || 'Failed to generate prediction. Check backend connection.'
+        message: errMsg
       });
       setLoading(false);
     }
@@ -228,7 +257,7 @@ export default function AddPatientPage() {
       {/* ── Form Container ─────────────────────────────────── */}
       {loading ? (
         <div className="app-card p-10">
-          <LoadingPulse message="Processing clinical parameters and calculating prediction..." />
+          <LoadingPulse message="Processing clinical parameters with AI (may take ~15-20s if cloud service is waking up)..." />
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -265,6 +294,7 @@ export default function AddPatientPage() {
                 </label>
                 <input
                   type="number"
+                  inputMode="numeric"
                   name="age"
                   value={form.age}
                   onChange={handleChange}
@@ -304,7 +334,8 @@ export default function AddPatientPage() {
                   Phone (Optional)
                 </label>
                 <input
-                  type="text"
+                  type="tel"
+                  inputMode="tel"
                   name="contact"
                   value={form.contact}
                   onChange={handleChange}
@@ -321,6 +352,7 @@ export default function AddPatientPage() {
                 </label>
                 <input
                   type="number"
+                  inputMode="numeric"
                   name="height"
                   value={form.height}
                   onChange={handleChange}
@@ -336,6 +368,7 @@ export default function AddPatientPage() {
                 </label>
                 <input
                   type="number"
+                  inputMode="numeric"
                   name="weight"
                   value={form.weight}
                   onChange={handleChange}
@@ -361,6 +394,7 @@ export default function AddPatientPage() {
                 </label>
                 <input
                   type="number"
+                  inputMode="numeric"
                   name="RestingBP"
                   value={form.RestingBP}
                   onChange={handleChange}
@@ -381,6 +415,7 @@ export default function AddPatientPage() {
                 </label>
                 <input
                   type="number"
+                  inputMode="numeric"
                   name="Cholesterol"
                   value={form.Cholesterol}
                   onChange={handleChange}
@@ -442,6 +477,7 @@ export default function AddPatientPage() {
                 </label>
                 <input
                   type="number"
+                  inputMode="numeric"
                   name="MaxHR"
                   value={form.MaxHR}
                   onChange={handleChange}
@@ -504,6 +540,7 @@ export default function AddPatientPage() {
                 </label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   step="0.1"
                   name="Oldpeak"
                   value={form.Oldpeak}
